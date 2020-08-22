@@ -8,6 +8,7 @@ let refreshTokens = [];
 module.exports = {
     validarTokenOrg(req, res, next) {
         const cid = getCid(req);
+        res.header("Content-Type", "application/json");
         res.header('x-cid', cid);
         logger.info( `Tracking [${cid}]. Request from ${req.method} ${req.path}`);
 
@@ -42,11 +43,11 @@ module.exports = {
 
         logger.info( `Tracking [${cid}]. Gerando token para o usuario=${usuarioId}`);
         const token = jwt.sign({ usuarioId, orgId, role }, process.env.SECRET, {
-            expiresIn: 30000 // expires in 5min
+            //expiresIn: 30000 // expires in 5min
         });
         const refreshToken = jwt.sign({ usuarioId, orgId, role }, process.env.REFRESHTOKEN);
         refreshTokens.push(refreshToken);
-        return res.json({ token: token, refreshToken: refreshToken });
+        return res.json({ org_id: orgId, token: token, refreshToken: refreshToken });
     },
 
     obterNovoToken(req, res, next) {
