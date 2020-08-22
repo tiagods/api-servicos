@@ -1,7 +1,5 @@
 'use strict';
 
-const { Sequelize } = require(".");
-
 module.exports = (sequelize, DataTypes) => {
   const clientes = sequelize.define('clientes', {
     cliente_id: {
@@ -9,7 +7,7 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey:true,
       autoIncrement:true
     },
-    org_Id: DataTypes.STRING,
+    org_id: DataTypes.STRING,
     nome: DataTypes.STRING,
     endereco: DataTypes.STRING,
     num: DataTypes.STRING,
