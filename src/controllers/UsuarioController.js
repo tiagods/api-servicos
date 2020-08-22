@@ -1,6 +1,7 @@
-const correlator = require('correlation-id');
 const { check, validationResult } = require('express-validator');
 let model = require('../models/index');
+const {getCid} = require("../config/correlationId");
+const {logger} = require('../logger/logger');
 
 const getUsuario = (orgId, usuarioId) => {
     return model.usuarios.findOne({where: {usuario_id: usuarioId, org_id: orgId}}).then(response => {
@@ -14,6 +15,10 @@ module.exports = {
     },
 
     async login(req, res, next) {
+        const cid = getCid(req);
+        req.cid = cid;
+        res.header('x-cid', cid);
+        logger.info( `Tracking [${cid}]. Request from ${req.method} ${req.path}`);
         const {usuario, senha} = req.body;
 
         model.usuarios.findOne({
@@ -29,6 +34,7 @@ module.exports = {
                 next();
             }
             else {
+                logger.warn( `Tracking [${cid}]. Login invalido`);
                 return res.status(400).json({message: 'Login inválido!'});
             }
         }).catch(error=>{res.status(500).json({message:error})});

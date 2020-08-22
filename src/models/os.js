@@ -20,13 +20,13 @@ module.exports = (sequelize, DataTypes) => {
         usuario_tecnico_id: DataTypes.INTEGER,
         situacao: DataTypes.STRING,
         garantia: DataTypes.STRING,
-        createdAt: {
+        data: {
             type: 'TIMESTAMP',
-            defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
-            field: 'data'
+            defaultValue: sequelize.literal('CURRENT_TIMESTAMP')
         }
     }, {
         tableName: 'os',
+        timestamps:false
     });
     return os;
 }

@@ -1,11 +1,12 @@
 const { check, validationResult } = require('express-validator');
+const moment = require('moment');
 const model = require('../models/index');
-const {getCliente} = require('ClienteController')
-const {getUsuario} = require('UsuarioController')
+const {getCliente} = require("./ClienteController");
+const {getUsuario} = require("./UsuarioController");
 
 
 const getOs = (orgId, osId) => {
-    model.os.findOne({where:{os_id: osId, org_id: orgId}}).then(response=> {return response});
+    return model.os.findOne({where:{os_id: osId, org_id: orgId}}).then(response=> {return response;});
 }
 
 module.exports = {
@@ -16,7 +17,9 @@ module.exports = {
             where:{
                 org_id: orgId
             }})
-            .then(response=> {return resp.json(response)})
+            .then(response=> {
+                response.data = moment(response.data).format("dd/MM/yyyy DD:mm:ss");
+                return resp.json(response)})
             .catch(error=>{resp.status(500).json({message:error})});
     },
 
@@ -32,7 +35,14 @@ module.exports = {
         }
         const osId = req.params.osId;
         getOs(orgId, osId)
-            .then(response=> {return resp.json(response)})
+            .then(response=> {
+                if(response){
+                    response.data = moment(response.data).format("dd/MM/yyyy DD:mm:ss");
+                    return resp.json(response);
+                }
+                else {
+                    return resp.status(400).json({message: 'Os nao existe'});
+                }})
             .catch(error=>{resp.status(500).json({message:error})});
     },
 
@@ -88,7 +98,10 @@ module.exports = {
                 }
             })
                 .then(() => {
-                    getOs(orgId, osId).then(data=> resp.json(data))
+                    getOs(orgId, osId).then(response=> {
+                        response.data = moment(response.data).format("dd/MM/yyyy DD:mm:ss");
+                        return resp.json(response);
+                    })
                 })
         }catch(error){
             resp.status(500).json({message:error});
@@ -98,7 +111,7 @@ module.exports = {
     async post(req, resp, next) {
         try{
             const {orgId, usuarioId} = req;
-
+            console.log('Logado='+usuarioId)
             const {
                 cliente_id, tipo, aparelho, defeito,
                 servico, valor, entrada, obs,
@@ -140,6 +153,7 @@ module.exports = {
                 garantia: garantia,
             })
                 .then(response => {
+                    response.data = moment(response.data).format("dd/MM/yyyy DD:mm:ss");
                     return resp.json(response)
                 })
         }catch(error){
