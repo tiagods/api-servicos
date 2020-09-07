@@ -27,19 +27,23 @@ module.exports = {
         model.usuarios.findOne({
             where: {
                 login: usuario,
-                senha: senha
+                senha: senha,
             }
         })
             .then(result=> {
-                if(result){
-                    logger.info( `Tracking [${cid}]. Usuario encontrado (${result.usuario_id})`);
-                    req.usuarioId = result.usuario_id;
-                    req.orgId = result.org_id;
-                    req.role = ['ALL'];
-                    req.cid = cid;
-                    next();
-                }
-                else {
+                if(result) {
+                    if(result.ativo != undefined && result.ativo==1) {
+                        logger.info(`Tracking [${cid}]. Usuario encontrado (${result.usuario_id})`);
+                        req.usuarioId = result.usuario_id;
+                        req.orgId = result.org_id;
+                        req.role = ['ALL'];
+                        req.cid = cid;
+                        next();
+                    } else {
+                        logger.warn( `Tracking [${cid}]. Acesso bloqueado. (${result.usuario_id})`);
+                        return res.status(400).json({message: 'Acesso bloqueado, verifique suas permissões de acesso'})
+                    }
+                } else {
                     logger.warn( `Tracking [${cid}]. Login invalido`);
                     return res.status(400).json({message: 'Login inválido!'});
                 }
