@@ -14,7 +14,7 @@
     "dialect": "mysql"
   },
   "production": {
-    "username": "root",
+    "username": "127.0.0.1",
     "password": "root",
     "database": "infoq",
     "host": "127.0.0.1",

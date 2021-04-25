@@ -1,51 +1,52 @@
-create table org (
-    org_id varchar(50),
-    nome varchar(150),
-    cnpj varchar(20),
-    endereco varchar(150),
-    bairro varchar(50),
-    cep varchar(10),
-    cidade varchar(100),
-    estado varchar(2),
-    celular varchar(50),
-    telefone varchar(50),
-    email varchar(50),
-    site varchar(50),
-    primary key(org_id)
+CREATE TABLE IF NOT EXISTS org (
+    org_id VARCHAR(50),
+    nome VARCHAR(150),
+    cnpj VARCHAR(20),
+    endereco VARCHAR(150),
+    bairro VARCHAR(50),
+    cep VARCHAR(10),
+    cidade VARCHAR(100),
+    estado VARCHAR(2),
+    celular VARCHAR(50),
+    telefone VARCHAR(50),
+    email VARCHAR(50),
+    site VARCHAR(50),
+    sobre TEXT,
+    PRIMARY KEY (org_id)
 );
 
-create table cliente (
-    cliente_id int auto_increment,
-    org_Id varchar(50),
-    nome varchar(150),
-    endereco varchar(150),
-    bairro varchar(50),
-    num varchar(10),
-    comp varchar(20),
-    email varchar(50),
-    cpf varchar(20),
-    cnpj varchar(20),
-    rg varchar(20),
-    fone varchar(20),
-    cel varchar(20),
-    primary key(cliente_id)
+CREATE TABLE IF NOT EXISTS cliente (
+    cliente_id INTEGER(11) AUTO_INCREMENT,
+    org_id VARCHAR(50),
+    nome VARCHAR(150),
+    endereco VARCHAR(150),
+    bairro VARCHAR(50),
+    num VARCHAR(10),
+    comp VARCHAR(20),
+    email VARCHAR(50),
+    cpf VARCHAR(20),
+    cnpj VARCHAR(20),
+    rg VARCHAR(20),
+    fone VARCHAR(20),
+    cel VARCHAR(20),
+    PRIMARY KEY (cliente_id)
 );
 
-CREATE TABLE usuario(
-    usuario_id integer auto_increment,
-    org_Id varchar(50),
-    usuario varchar(50),
-    login varchar(15),
-    fone varchar(15),
-    senha varchar(50),
-    perfil varchar(15),
+CREATE TABLE IF NOT EXISTS usuario (
+    usuario_id INTEGER(11) AUTO_INCREMENT,
+    org_id VARCHAR(50),
+    usuario VARCHAR(50),
+    login VARCHAR(15),
+    fone VARCHAR(15),
+    senha VARCHAR(50),
+    perfil VARCHAR(15),
     tecnico boolean DEFAULT TRUE,
     ativo boolean DEFAULT TRUE,
     PRIMARY KEY (usuario_id)
 );
 
-CREATE TABLE os (
-    os_id INTEGER AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS os (
+    os_id INTEGER(11) AUTO_INCREMENT,
     usuario_id INTEGER NOT NULL,
     cliente_id INTEGER NOT NULL,
     org_id VARCHAR(50) NOT NULL,
@@ -60,5 +61,5 @@ CREATE TABLE os (
     usuario_tecnico_id INTEGER DEFAULT NULL,
     situacao VARCHAR(28) NOT NULL,
     garantia VARCHAR(15) NOT NULL,
-    primary key(os_id)
+    PRIMARY KEY (os_id)
 );

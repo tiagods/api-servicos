@@ -16,6 +16,7 @@ module.exports = (sequelize, DataTypes) => {
     telefone: DataTypes.STRING,
     email: DataTypes.STRING,
     site: DataTypes.STRING,
+    sobre: DataTypes.STRING
   }, {
     tableName: 'org',
     timestamps:false

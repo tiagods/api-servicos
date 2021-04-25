@@ -17,7 +17,7 @@ const logger = createLogger({
             )
         }),
         new transports.Stream({
-            stream: fs.createWriteStream('./example.log')
+            stream: fs.createWriteStream('./arquivo.log')
         })
     ]
 })

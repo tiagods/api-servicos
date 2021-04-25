@@ -1,11 +1,23 @@
-require("dotenv-safe").config();
+require("dotenv").config();
 let jwt = require('jsonwebtoken');
 const {getCid} = require('../config/correlationId')
 const {logger} = require('../logger/logger');
 
+const ROLES = {ADMIN: 'ADMIN', ALL: 'ALL', GERENTE: 'GERENTE', COMUM: 'COMUM'}
+
 let refreshTokens = [];
 
 module.exports = {
+    validarRole(roles, garantia) {
+        garantia.forEach (e2 => {
+            const index = roles.indexOf(e2)
+            if(index => 0) {
+                return true
+            }
+        })
+        return false
+    },
+
     validarTokenOrg(req, res, next) {
         const cid = getCid(req);
         req.cid = cid;
@@ -14,15 +26,15 @@ module.exports = {
         logger.info( `Tracking [${cid}]. Request from ${req.method} ${req.path}`);
 
         let token = req.headers.authorization;
-        const orgId = req.headers['x-tenant'];
-
         if (!token) {
             logger.warn( `Tracking [${cid}]. Nenhum token encontrado`);
-            return res.status(422).json({ message: 'Nenhum token encontrado.'});
+            return res.status(403).json({ message: 'Nenhum token encontrado.'});
         }
+        const orgId = req.headers['x-tenant'];
+
         if(!orgId) {
             logger.warn( `Tracking [${cid}]. Tenant nao encontrato`);
-            return res.status(422).json({message: 'Falta de credenciais, tenant nao encontrado'})
+            return res.status(403).json({message: 'Falta de credenciais, tenant nao encontrado'})
         }
         jwt.verify(token, process.env.SECRET, function(err, decoded) {
             if (err) {
@@ -47,12 +59,12 @@ module.exports = {
 
         logger.info( `Tracking [${cid}]. Gerando token e tokenRefresh para o usuario=${usuarioId}`);
         const token = jwt.sign({ usuarioId, orgId, role }, process.env.SECRET, {
-            expiresIn: 30000 // expires in 5min
+            //expiresIn: 30000 // expires in 5min
         });
         const refreshToken = jwt.sign({ usuarioId, orgId, role }, process.env.REFRESHTOKEN);
         refreshTokens.push(refreshToken);
         logger.info( `Tracking [${cid}]. Tokens gerados com sucesso para o usuario=${usuarioId}`);
-        return res.json({ org_id: orgId, token: token, refreshToken: refreshToken });
+        return res.status(201).json({ org_id: orgId, token: token, refreshToken: refreshToken });
     },
 
     obterNovoToken(req, res, next) {
@@ -64,7 +76,7 @@ module.exports = {
         const { token } = req.headers.authorization;
         if (!token) {
             logger.warn( `Tracking [${cid}]. Token invalido ou nao informado`);
-            return res.status(422).json({message: 'Token invalido ou nao informado'});
+            return res.status(403).json({message: 'Token invalido ou nao informado'});
         }
         if (!refreshTokens.includes(token)) {
             logger.warn( `Tracking [${cid}]. Tentativa de refresh token invalido`);
