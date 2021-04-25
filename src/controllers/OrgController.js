@@ -15,6 +15,13 @@ module.exports = {
 
     async post(req, resp) {
         const {cid} = req
+        const role = req.role
+        const result = role.indexOf('ALL')
+
+        if(result==-1) {
+            logger.warn( `Tracking [${cid}]. Falha ao tentar gerar org=${newOrg}. Usuario sem permissão`);
+            return resp.status(401).json({message: "Usuario sem permissão"})            
+        }
 
         let newOrg = correlator.withId(() => {
             return correlator.getId();
@@ -27,7 +34,7 @@ module.exports = {
         logger.info( `Tracking [${cid}]. Novo id de org=${orgId}`);
 
         const{nome,cnpj,endereco,bairro,cep,cidade,estado,
-            celular,telefone,email,site}=req.body;
+            celular,telefone,email,site,sobre}=req.body;
 
         logger.info( `Tracking [${cid}]. Criando nova org`);
         model.orgs.create({
@@ -42,7 +49,8 @@ module.exports = {
             celular: celular,
             telefone: telefone,
             email: email,
-            site: site
+            site: site,
+            sobre: sobre
         })
         .then(org=>{
             logger.info( `Tracking [${cid}]. Nova org criada (${org.org_id})`);
@@ -77,7 +85,7 @@ module.exports = {
         const {orgId, cid} = req
 
         const{nome,cnpj,endereco,bairro,cep,cidade,estado,
-            celular,telefone,email,site}=req.body;
+            celular,telefone,email,site,sobre}=req.body;
         try {
             const exists = await getOrg(cid, orgId);
             if(!exists){
@@ -95,7 +103,8 @@ module.exports = {
                     celular: celular,
                     telefone: telefone,
                     email: email,
-                    site: site
+                    site: site,
+                    sobre: sobre
                 },{ where:{
                         org_id: orgId
                     }

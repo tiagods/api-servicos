@@ -1,6 +1,7 @@
 const { check, validationResult } = require('express-validator');
 const model = require('../models/index');
 const {logger} = require('../logger/logger');
+const db = require('../models/index');
 
 const getCliente = (cid, orgId, clienteId) => {
     logger.info( `Tracking [${cid}]. Buscando cliente=(${clienteId}) em org=(${orgId})`);
@@ -46,15 +47,22 @@ module.exports = {
 
     async get(req, resp){
         const {orgId, cid} = req
+        const { offset } = req.query
+
         logger.info( `Tracking [${cid}]. Listando clientes da org=(${orgId})`);
-        model.clientes.findAll({
-            where: {
-                org_id: orgId
-            }
-        })
-        .then(result=>{
+        
+        model.sequelize.query(`
+            select * 
+            from cliente
+            where org_id = :orgId
+            order by cliente_id desc
+            limit 10 offset :offset
+        `, {
+            replacements: { orgId: orgId, offset: offset ? Number(offset) : 0  },
+            mapToModel: false
+        }).then(result=>{
             logger.info( `Tracking [${cid}]. Listando clientes pela org=(${orgId}). Total=(${result.length})`);
-            resp.json(result);
+            resp.json(result[0]);
         })
         .catch(error=>{
             logger.error( `Tracking [${cid}]. Erro ao listar clientes na org=(${orgId}), ex=(${error})`);
@@ -68,7 +76,7 @@ module.exports = {
         const errors = validationResult(req);
         if(!errors.isEmpty()) {
             logger.warn( `Tracking [${cid}]. Parametros invalidos na requisicao org=(${orgId}), params=(${errors.array()})`);
-            return resp.status(422).json({
+            return resp.status(400).json({
                 message:'Argumentos invalidos',
                 errors:errors.array()
             })
@@ -95,7 +103,7 @@ module.exports = {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             logger.warn( `Tracking [${cid}]. Parametros invalidos na requisicao org=(${orgId}), params=(${errors.array()})`);
-            return resp.status(422).json({
+            return resp.status(400).json({
                 message: 'Argumentos invalidos',
                 error: errors.array()
             })

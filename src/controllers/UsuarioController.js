@@ -3,6 +3,12 @@ let model = require('../models/index');
 const {getCid} = require("../config/correlationId");
 const {logger} = require('../logger/logger');
 const db = require('../models');
+const bcrypt = require('bcryptjs');
+
+const perfils = [
+    'ADMIN',
+    'COMUM'
+]
 
 const getUsuario = (cid, orgId, usuarioId) => {
     return model.usuarios.findOne({where: {usuario_id: usuarioId, org_id: orgId}}).then(response => {
@@ -16,21 +22,21 @@ module.exports = {
         return getUsuario(cid, orgId, usuarioId);
     },
 
-    async login(req, res, next) {
+    async login(req, resp, next) {
         const cid = getCid(req);
         req.cid = cid;
-        res.header('x-cid', cid);
+        resp.header('x-cid', cid);
         logger.info( `Tracking [${cid}]. Request from ${req.method} ${req.path}`);
-        const {usuario, senha} = req.body;
+        const {login, senha} = req.body;
 
-        logger.info( `Tracking [${cid}]. Buscando usuario por nome e senha`);
+        logger.info( `Tracking [${cid}]. Buscando usuario por nome`);
         model.usuarios.findOne({
             where: {
-                login: usuario,
+                login: login,
                 senha: senha,
             }
         })
-            .then(result=> {
+            .then( result => {
                 if(result) {
                     if(result.ativo != undefined && result.ativo==1) {
                         logger.info(`Tracking [${cid}]. Usuario encontrado (${result.usuario_id})`);
@@ -41,23 +47,57 @@ module.exports = {
                         next();
                     } else {
                         logger.warn( `Tracking [${cid}]. Acesso bloqueado. (${result.usuario_id})`);
-                        return res.status(400).json({message: 'Acesso bloqueado, verifique suas permissões de acesso'})
+                        return resp.status(400).json({message: 'Acesso bloqueado, verifique suas permissões de acesso'})
                     }
                 } else {
                     logger.warn( `Tracking [${cid}]. Login invalido`);
-                    return res.status(400).json({message: 'Login inválido!'});
+                    return resp.status(401).json({ message: 'Login inválido! Tente novamente'});
                 }
             })
-            .catch(error=>{
-                logger.error( `Tracking [${cid}]. Erro ao tentar criar novo cliente na org=(${orgId}), ex=(${error})`);
-                resp.status(500).json({message:error});
+            .catch(error => {
+                    logger.error( `Tracking [${cid}]. Erro ao tentar logar do usuario=(${usuario}), ex=(${error})`);
+                    return resp.status(500).json({ message: error});
             });
     },
 
     async post(req, resp) {
         const {cid, orgId} = req;
 
-        const{usuario,fone,login,senha,perfil,tecnico,ativo}=req.body;
+        let {usuario,fone,login,senha,perfil,tecnico,ativo}=req.body;
+
+        if(tecnico===undefined) {
+            tecnico = false
+        }
+        if(ativo === undefined) {
+            ativo = true
+        }
+
+        if(perfil === undefined) {
+            perfil = 'COMUM'
+        } else {
+            const perfilresult = perfils.find(element => element === perfil)
+            if(!perfilresult){
+                const message = `Perfil informado é invalido ${perfil}`
+                logger.warn( `Tracking [${cid}]. ${message}`);
+                return resp.status(400).json({message: message})
+            }
+        }
+
+        if(!usuario || !fone || !login || !senha || !orgId) {
+            const message = 'Cancelado criacao de usuario por falta de parametro'
+            logger.warn( `Tracking [${cid}]. ${message}`);
+            return resp.status(400).json({message: message})
+        }
+        if(login.length <= 4) {
+            const message = 'Cancelado criacao de usuario por login invalido (acima de 4 caracteres)'
+            logger.warn( `Tracking [${cid}]. ${message}`);
+            return resp.status(400).json({message: message})
+        }
+        if(senha===login || senha.length <= 4) {
+            const message = 'Cancelado criacao de usuario por senha invalida (acima de 4 caracteres)'
+            logger.warn( `Tracking [${cid}]. ${message}`);
+            return resp.status(400).json({message: message})
+        }
 
         model.usuarios.findOne({where: {login: login, org_id: orgId}}).then(result=> {
             if(result){
@@ -66,37 +106,42 @@ module.exports = {
                 return resp.status(400).json({message:'Login ja existe'})
             }
         })
-        logger.info( `Tracking [${cid}]. Criando novo usuario`);
-        model.usuarios.create({
-            org_id: orgId,
-            usuario: usuario,
-            fone: fone,
-            login: login,
-            senha: senha,
-            perfil: perfil,
-            tecnico: tecnico? tecnico:true,
-            ativo: ativo?ativo:true
-        })
-            .then(result=>{
-                logger.info( `Tracking [${cid}]. Novo usuario criado=(${result.usuario_id}) org=(${orgId}), ex=(${error})`);
-                resp.status(201).json(result);
+
+        try {
+            logger.info( `Tracking [${cid}]. Criando novo usuario`);
+        
+            model.usuarios.create({
+                org_id  : orgId,
+                usuario : usuario,
+                fone    : fone,
+                login   : login,
+                senha   : senha,
+                perfil  : perfil,
+                tecnico : tecnico? 1:true,
+                ativo   : ativo? 1:true
             })
-            .catch(error=>{
-                logger.error( `Tracking [${cid}]. Erro ao tentar criar novo usuario na org=(${orgId}), ex=(${error})`);
-                resp.status(500).json({message:error});
-            });
+            .then(result => {
+                logger.info( `Tracking [${cid}]. Novo usuario criado=(${result.usuario_id}) org=(${orgId})`);
+                return resp.status(201).json(result);
+            })
+        } catch (error) {
+            logger.error( `Tracking [${cid}]. Erro ao tentar criar novo usuario na org=(${orgId}), ex=(${error})`);
+            resp.status(500).json({message:error});
+        }
+
     },
 
     async put(req, resp) {
         const {cid, orgId} = req;
 
-        const{usuario,fone,senha,perfil,tecnico,ativo}=req.body;
+        const {usuario,fone,senha,perfil,tecnico,ativo}=req.body;
+
         await check('usuarioId').isInt().run(req);
         const errors = validationResult(req);
         if(!errors.isEmpty()) {
             logger.warn( `Tracking [${cid}]. Parametros invalidos na requisicao org=(${orgId}), 
             params=(${errors.array()})`);
-            return resp.status(422).json({
+            return resp.status(400).json({
                 message:'Argumentos invalidos',
                 errors:errors.array()
             })
@@ -108,21 +153,38 @@ module.exports = {
                 logger.warn( `Tracking [${cid}]. Registro nao existe usuario=(${usuarioId}, org=(${orgId})`);
                 return resp.status(400).json({message:'Registro nao existe'})
             }
-            model.orgs.update({
+
+            let senhaBcryp = senha ? senha : result.senha
+
+            const statusTecnico = (tecnico===undefined) ? result.tecnico : (tecnico? 1 : 0)
+            const statusAtivo = (ativo===undefined) ? result.ativo : (ativo? 1 : 0)
+
+            let perfilFinal = perfil
+            if(perfil === undefined) {
+                perfilFinal = result.perfil
+            } else {
+                const perfilresult = perfils.find(element => element === perfil)
+                if(!perfilresult){
+                    const message = `Perfil informado é invalido ${perfil}`
+                    logger.warn( `Tracking [${cid}]. ${message}`);
+                    return resp.status(400).json({message: message})
+                }
+            }
+
+            model.usuarios.update({
                 usuario: usuario,
                 fone: fone,
-                senha: senha ? senha:result.senha,
-                perfil: perfil,
-                tecnico: tecnico? tecnico:result.tecnico,
-                ativo: ativo?ativo:result.ativo
+                senha: senhaBcryp,
+                perfil: perfilFinal,
+                tecnico: statusTecnico,
+                ativo: statusAtivo
             },{ where:{
                     usuario_id: usuarioId,
                     org_id: orgId
                 }
             })
                 .then(r=>{
-                    getUsuario(cid, orgId,usuarioId).then(response=>{
-                        resp.json(response);
+                    getUsuario(cid, orgId, usuarioId).then(response=> {
                         if(response){
                             logger.info( `Tracking [${cid}]. Registro atualizado usuario=(${usuarioId}, org=(${orgId})`);
                             return resp.json(response);
@@ -131,7 +193,6 @@ module.exports = {
                             logger.warn(`Tracking [${cid}]. Registro nao encontrado, usuario=(${usuario_id}), org=(${orgId})`);
                             return resp.status(400).json({message: 'Registro nao existe'});
                         }
-
                     })
                 });
         } catch (error) {
@@ -143,11 +204,6 @@ module.exports = {
     async get(req, resp) {
         const {cid, orgId} = req;
 
-        // const result = await db.sequelize.query('SELECT * FROM cliente WHERE org_id = :orgId', {
-        //     replacements: {orgId: orgId},
-        //     type: db.sequelize.QueryTypes.SELECT
-        // });
-        // return resp.json(result);
         logger.info( `Tracking [${cid}]. Listando usuarios da org=(${orgId})`);
         model.usuarios.findAll({
             where: {
@@ -171,7 +227,7 @@ module.exports = {
         if(!errors.isEmpty()) {
             logger.warn(`Tracking [${cid}]. Parametros invalidos na requisicao org=(${orgId}), 
                 params=(${errors.array()})`);
-            return resp.status(422).json({
+            return resp.status(400).json({
                 message:'Argumentos invalidos',
                 errors:errors.array()
             })
